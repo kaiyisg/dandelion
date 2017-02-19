@@ -9,27 +9,15 @@ var format = require('util').format;
 
 var mongoStr = process.env.DB_CONNECT
 
-// MongoClient.connect(mongoStr, function(err, db) {
-//   var records = db.collection('events').find().sort({published_at:-1}).limit(2);
-//   records.toArray(function(err, docs) {
-//     console.log(docs);
-//     db.close();
-//   })
-// });
-
 app.get('/latest', function(req, res) {
-  var latestRecord = {};
   MongoClient.connect(mongoStr, function(err, db) {
-    var records = db.collection('events').find().sort({published_at:-1}).limit(2);
+    var records = db.collection('events').find().sort({published_at:-1}).limit(10);
     records.toArray(function(err, docs) {
-      latestRecord = docs[0];
-      //console.log(latestRecord);
-      res.send(latestRecord);
+      res.send(uniqueDeviceIds(docs));
       db.close();
     })
   });
 })
-
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/public/index.html');
@@ -38,3 +26,13 @@ app.get('/', function(req, res){
 app.listen(3000, function() {
   console.log('Backend listening on port 3000!')
 })
+
+function uniqueDeviceIds(events) {
+  var resultArray = {};
+  events.forEach(function(event) {
+    if (!(event.device_id in resultArray)) {
+      resultArray[event.device_id] = event;
+    }
+  })
+  return resultArray;
+}

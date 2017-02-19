@@ -24,7 +24,9 @@
 </div>
 <script>
 
-  var mymap = L.map('mapid').setView([37.428059, -122.174484], 13);
+  // var mymap = L.map('mapid').setView([37.428059, -122.174484], 13);
+
+  var mymap = L.map('mapid').setView([37.406489, -122.117769], 14);
 
   L.tileLayer('https://api.pitneybowes.com/location-intelligence/geomap/v1/tile/osm/{z}/{x}/{y}.png?api_key=x7x8xAPAumgfBownML8XKB2LDaqiALry', {
     maxZoom: 18,
@@ -85,7 +87,7 @@
     } else {
       latlng = L.latLng(Number(data.lat),Number(data.lon));
     }
-    circles[data.device_id] = L.circle(latlng, data.sound/100, {
+    circles[data.device_id] = L.circle(latlng, data.sound/1000, {
       color: '#f07300',
       fillOpacity: 0.5,
       opacity: 0.5
@@ -98,8 +100,9 @@
   setInterval(function() {
     $.get( "/latest" ).then(
       function(data) {
-        updateCircle(circles, mymap, data);
-        console.log(circles);
+        Object.keys(data).forEach(function(deviceId) {
+          updateCircle(circles, mymap, data[deviceId]);
+        });
       }, function(error) {
         console.log(error);
       }
