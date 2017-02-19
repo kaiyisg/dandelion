@@ -12,7 +12,7 @@
 #define READING_ACCEL_MAG     1
 #define READING_LAT           2
 #define READING_LON           3
-#define ACCEL_INTERVAL_MS     1000
+#define ACCEL_INTERVAL_MS     2000
 #define SOUND_INTERVAL_MS     1000
 #define PUBLISH_INTERVAL_MS   1000
 #define BUZZ_DURATION         2000
@@ -69,14 +69,14 @@ void setup(){
 
 void loop(){
   // GPS reading + Particle Publish
-  if (millis() - lastGPSUpdate >= GPS_INTERVAL_MS){
+  if ((millis() - lastGPSUpdate) >= GPS_INTERVAL_MS){
     lastGPSUpdate = millis();
     data[READING_LAT] = latitudeDegrees;
     data[READING_LON] = longitudeDegrees;
   }
 
   // Sound Sensor
-  if (millis() - lastSoundUpdate >= SOUND_INTERVAL_MS){
+  if ((millis() - lastSoundUpdate) >= SOUND_INTERVAL_MS){
     lastSoundUpdate = millis();
     sum = 0;
     for (int i=0; i<32; i++){
@@ -87,7 +87,7 @@ void loop(){
   }
 
   // Accelerometer
-  if (millis() - lastAccelUpdate >= ACCEL_INTERVAL_MS){
+  if ((millis() - lastAccelUpdate) >= ACCEL_INTERVAL_MS){
     lastAccelUpdate = millis();
     mma.read();
     sensors_event_t event;
@@ -96,7 +96,8 @@ void loop(){
     data[READING_ACCEL_MAG] = abs(accel-1);
   }
 
-  if (millis() - lastPublish >= PUBLISH_INTERVAL_MS){
+  if ((millis() - lastPublish) >= PUBLISH_INTERVAL_MS){
+    lastPublish = millis();
     Particle.publish("push_data", String::format(
       "%f,%0.3f,%0.6f,%0.6f", data[0],data[1],data[2],data[3]));
   }
