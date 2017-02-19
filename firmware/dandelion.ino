@@ -1,36 +1,33 @@
 //SYSTEM_MODE(SEMI_AUTOMATIC);
+//#include "Adafruit_MMA8451.h"
+//#include "Adafruit_Sensor.h"
 
-#define PIEZO  A0
-#define SOUND  A1
+#define SOUND A1
 #define BUZZER D2
 #define ACCEL_X A2
 #define ACCEL_Y A3
 #define ACCEL_Z A4
 
-#include "lib/Adafruit_MMA8451.h"
-#include "lib/Adafruit_Sensor.h"
+#define READING_SOUND 0
+#define READING_ACCEL_X 1
+#define READING_ACCEL_Y 2
+#define READING_ACCEL_Z 3
+#define READING_LAT 4
+#define READING_LNG 5
 
-//#include <Adafruit_MMA8451.h>
-//#include <Adafruit_Sensor.h>
-Adafruit_MMA8451 mma = Adafruit_MMA8451();
-
-// Piezo Sensor
-//int piezoValue = analogRead(PIEZO);
-//Serial.println(piezoValue);
-//Serial.println("");
+//Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
 #define THRESHOLD_VALUE 400*32 //The threshold to turn on is 400.00*5/1024 = 1.95v
 //value gotten from http://www.mouser.com/catalog/specsheets/Seeed_101020023.pdf
 
 void setup(){
   Serial.begin(9600);
-  if (! mma.begin()) {
-    Serial.println("Couldnt start");
-    while (1);
-  }
-  Serial.println("MMA8451 found!");
-  mma.setRange(MMA8451_RANGE_2_G);
-  pinMode(PIEZO, OUTPUT);
+  //if (! mma.begin()) {
+  //  Serial.println("Couldnt start");
+  //  while (1);
+  //}
+  //Serial.println("MMA8451 found!");
+  //mma.setRange(MMA8451_RANGE_2_G);
   pinMode(SOUND, INPUT);
   pinMode(BUZZER, OUTPUT);
 }
@@ -40,8 +37,9 @@ void loop(){
   digitalWrite(BUZZER, LOW);
 
   //formatting data to send
-  float data[6];
+  //the data is in the following formatting
   //[SOUND_READING, ACCEL_X, ACCEL_Y, ACCEL_Z, LAT, LNG]
+  float data[6];
 
   //sound sensor
   Serial.println("Sound:");
@@ -51,20 +49,25 @@ void loop(){
     Serial.println(sound);
     sum += sound;
   }
-  data[0] = (float)sum;
+  data[READING_SOUND] = (float)sum;
 
   //accel readings
-  mma.read();
-  sensors_event_t event;
-  mma.getEvent(&event);
+  //mma.read();
+  //sensors_event_t event;
+  //mma.getEvent(&event);
   //Serial.print(event.acceleration.x);
-  data[1] = event.acceleration.x;
-  data[2] = event.acceleration.y;
-  data[3] = event.acceleration.z;
+  //data[1] = event.acceleration.x;
+  //data[2] = event.acceleration.y;
+  //data[3] = event.acceleration.z;
+
+  data[READING_ACCEL_X] = 1.23124124;
+  data[READING_ACCEL_Y] = 0.421442142;
+  data[READING_ACCEL_Z] = 0.41242341;
+
 
   //lat lng readings
-  data[4] = 37.428059;
-  data[5] = -122.174488;
+  data[READING_LAT] = 37.428059;
+  data[READING_LNG] = -122.174488;
 
 
   Particle.publish("push_data", String::format(
@@ -76,8 +79,6 @@ void loop(){
     delay(1000);
     digitalWrite(BUZZER, LOW);
   }
-  //delay(1000);
 
-  Serial.println("done");
   delay(1000);
 }
