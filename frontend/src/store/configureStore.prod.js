@@ -20,17 +20,6 @@ export default function configureStore(initialState) {
 
   store.subscribe(throttle(() => {
     saveState({
-      user: {
-        token: store.getState().user.token,
-        userObject: store.getState().user.userObject,
-        signupInfo: {
-          displayName: '',
-          email: '',
-          password: ''
-        }
-      },
-      utilityInfo: store.getState().utilityInfo,
-      stories: store.getState().stories
     });
   }, 1000));
 

@@ -6,6 +6,8 @@ import { syncHistoryWithStore } from 'react-router-redux';
 import { loadState } from './util/localStorage';
 import configureStore from './store/configureStore';
 
+import Landing from './pages/Landing';
+
 /** ROUTES **/
 
 // Layout
@@ -22,6 +24,7 @@ export const getRoutes = (store) =>{
 
   return (
     <Route path="/" component={ App }>
+      <IndexRoute component={ Landing } />
       {/*<IndexRoute component={ Landing } />
 
       <Route path="signup" component={ Signup } />

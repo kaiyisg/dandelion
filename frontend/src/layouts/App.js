@@ -30,4 +30,13 @@ class App extends Component {
   }
 }
 
-export default App;
+// Redux
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+  };
+};
+
+export default connect(null, mapDispatchToProps)(App);
