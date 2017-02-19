@@ -4,7 +4,7 @@ import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import logo from './logo.svg';
 import './App.css';
 
-import { makeRouteSlug } from './util/helper';
+import { makeRouteSlug } from '../util/helper';
 
 class App extends Component {
 
@@ -17,15 +17,15 @@ class App extends Component {
 
   render() {
     return (
-      <div className="App">
-        <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h2>Welcome to React</h2>
+      <MuiThemeProvider muiTheme={ MuiTheme }>
+        <div>
+          <div id="root-container">
+            <div id="main" className={`page-${ makeRouteSlug(this.props.routes) }`}>
+              { this.props.children }
+            </div>
+          </div>
         </div>
-        <p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
-      </div>
+      </MuiThemeProvider>
     );
   }
 }
