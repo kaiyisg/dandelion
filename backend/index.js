@@ -1,11 +1,13 @@
 var express = require('express')
 var app = express()
+
+var env = require('dotenv').config()
 var assert = require('assert')
 
 var MongoClient = require('mongodb').MongoClient;
 var format = require('util').format;
 
-var mongoStr = 'mongodb://dandelion:jhhuhKgY6FEZHQ7l1VECRknnftnO55KX0mdbIiO2yASI89BuWn4SQORzulwM3809WqXQyEBjYWc2J1XhlCXgvw==@dandelion.documents.azure.com:10250/?ssl=true/dandelion_db';
+var mongoStr = process.env.DB_CONNECT
 
 var insertDocuments = function(db, callback) {
   var collection = db.collection('test_events');
