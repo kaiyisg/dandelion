@@ -9,28 +9,27 @@ var format = require('util').format;
 
 var mongoStr = process.env.DB_CONNECT
 
-var insertDocuments = function(db, callback) {
-  var collection = db.collection('test_events');
-  // Insert some documents
-  collection.insertMany([
-    {a : 1}, {a : 2}, {a : 3}
-  ], function(err, result) {
-    assert.equal(err, null);
-    assert.equal(3, result.result.n);
-    assert.equal(3, result.ops.length);
-    console.log("Inserted 3 documents into the collection");
-    callback(result);
-  })
-}
+// MongoClient.connect(mongoStr, function(err, db) {
+//   var records = db.collection('events').find().sort({published_at:-1}).limit(2);
+//   records.toArray(function(err, docs) {
+//     console.log(docs);
+//     db.close();
+//   })
+// });
 
-MongoClient.connect(mongoStr, function(err, db) {
-  assert.equal(null, err);
-  console.log("Connected successfully to server");
-
-  insertDocuments(db, function() {
-    db.close();
+app.get('/latest', function(req, res) {
+  var latestRecord = {};
+  MongoClient.connect(mongoStr, function(err, db) {
+    var records = db.collection('events').find().sort({published_at:-1}).limit(2);
+    records.toArray(function(err, docs) {
+      latestRecord = docs[0];
+      console.log(latestRecord);
+      res.send(latestRecord);
+      db.close();
+    })
   });
-});
+})
+
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/public/index.html');
