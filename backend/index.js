@@ -23,7 +23,7 @@ app.get('/latest', function(req, res) {
     var records = db.collection('events').find().sort({published_at:-1}).limit(2);
     records.toArray(function(err, docs) {
       latestRecord = docs[0];
-      console.log(latestRecord);
+      //console.log(latestRecord);
       res.send(latestRecord);
       db.close();
     })
