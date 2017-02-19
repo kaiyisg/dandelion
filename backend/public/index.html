@@ -4,22 +4,24 @@
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
   <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <style> body {width: 100%; height: 100%; }</style>
+  <script type="text/javascript">
+    $(document).ready(function(){
+    $('[data-toggle="popover"]').popover(); });
+  </script>
 
 </head>
 
 <body>
-
-
-
-<div id="mapid" style="width: 800px; height: 600px;"></div>
+<div>
+<div id="mapid" href="#" data-toggle="popover" title="Popover Header" data-content="Some content inside the popover" style="width: 2380px; height: 1280px;"></div>
+</div>
 <script>
 
   var mymap = L.map('mapid').setView([37.428059, -122.174484], 13);
@@ -45,12 +47,13 @@
     [51.503, -0.06],
     [51.51, -0.047]
   ]).addTo(mymap).bindPopup("I am a polygon.");*/
-
-
+  var customOptions = {
+    'maxWidth': '500',
+    'className' : 'custom'
+  }
+    
   var popup = L.popup();
-
   mymap.on('click', onMapClick);
-
   function onMapClick(e) {
     popup
       .setLatLng(e.latlng)
@@ -58,24 +61,53 @@
       .openOn(mymap);
   }
 
-  var clickCircle;
+  function updateCircle(circles, mymap, data) {
+    if (circles[data.device_id] != undefined) {
+      mymap.removeLayer(circles[data.device_id]);
+    }
+    addCircle(circles, mymap, data); 
+  }
 
+  function addCircle(circles, mymap, data) {
+    console.log(data);  
+    var dateObject = new Date(Date.parse(data.published_at));
+    var customPopup = 
+    `<h3>Device: ${data.device_id}</h3><br/>
+    <h3>Last updated: ${dateObject.toTimeString()}</h3>
+    <h3>Latlng: [${data.lat}, ${data.lon}]</h3>
+    <h3>Noise made: ${data.sound}</h3>
+    <h3>Moving acceleration: ${data.acceleration}</h3>
+    <a href="https://app.powerbi.com/groups/me/dashboards/7bb77410-d801-49f2-bdbb-5b0c19337e21">
+      Go to Dashboard</a>`
+    var latlng;
+    if (data.lat == 0 || data.lon == 0) {
+      latlng = L.latLng(37.428059, -122.174484);
+    } else {
+      latlng = L.latLng(Number(data.lat),Number(data.lon));
+    }
+    circles[data.device_id] = L.circle(latlng, data.sound/100, {
+      color: '#f07300',
+      fillOpacity: 0.5,
+      opacity: 0.5
+    })
+    .bindPopup(customPopup,customOptions)
+    .addTo(mymap);
+  }
+
+  var circles = {};
   setInterval(function() {
-  	$.get( "/latest", function( data ) {
-  		$( ".result" ).html( data );
-  		if (clickCircle != undefined) {
-      		mymap.removeLayer(clickCircle);
-    	};
-    	console.log(data.lat,data.lon, data.sound, data.published_at);
-    	var latlng = L.latLng(Number(data.lat),Number(data.lon));
-    	clickCircle = L.circle(latlng, data.sound/100, {
-      	color: '#f07300',
-      	fillOpacity: 0.5,
-      	opacity: 0.5
-    	}).addTo(mymap);
+    $.get( "/latest" ).then(
+      function(data) {
+        updateCircle(circles, mymap, data);
+        console.log(circles);
+      }, function(error) {
+        console.log(error);
+      }
+    );
+  	/*
   		//L.marker([data.lat, data.lon]).addTo(mymap)
   		//	.bindPopup("hi");
-	});
+	});*/
   }, 5000);
 
 </script>
