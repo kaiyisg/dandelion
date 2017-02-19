@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  
-  <title>Quick Start - Leaflet</title>
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,7 +64,7 @@
   		if (clickCircle != undefined) {
       		mymap.removeLayer(clickCircle);
     	};
-    	console.log(data.lat,data.lon);
+    	console.log(data.lat,data.lon, data.sound, data.published_at);
     	var latlng = L.latLng(Number(data.lat),Number(data.lon));
     	clickCircle = L.circle(latlng, data.sound/100, {
       	color: '#f07300',

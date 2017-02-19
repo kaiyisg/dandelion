@@ -1,117 +1,153 @@
 //SYSTEM_MODE(SEMI_AUTOMATIC);
-//#include "Adafruit_MMA8451.h"
-//#include "Adafruit_Sensor.h"
+#include "Adafruit_GPS.h"
+#include "Adafruit_MMA8451.h"
+#include "Adafruit_Sensor.h"
+#include "math.h"
 
-#define SOUND A1
-#define BUZZER D2
-#define ACCEL_X A2
-#define ACCEL_Y A3
-#define ACCEL_Z A4
+#define SOUND                 A0
+#define BUZZER                D2
 
-#define READING_SOUND 0
-#define READING_ACCEL_X 1
-#define READING_ACCEL_Y 2
-#define READING_ACCEL_Z 3
-#define READING_LAT 4
-#define READING_LNG 5
-#define INTERVAL_MS 5000
-#define INTERVAL_BUZZER 2000
+#define GPS_READ_INTERVAL_MS  1
+#define READING_SOUND         0
+#define READING_ACCEL_MAG     1
+#define READING_LAT           2
+#define READING_LON           3
+#define ACCEL_INTERVAL_MS     1000
+#define SOUND_INTERVAL_MS     1000
+#define PUBLISH_INTERVAL_MS   1000
+#define BUZZ_DURATION         2000
+#define GPS_INTERVAL_MS       5000
+#define SOUND_THRESHOLD_VALUE 55000
 
-//Adafruit_MMA8451 mma = Adafruit_MMA8451();
+Adafruit_GPS gps = Adafruit_GPS();
+Adafruit_MMA8451 mma = Adafruit_MMA8451();
+Timer gps_read_timer(1, updateGPS);
 
-#define THRESHOLD_VALUE 50000
-//400*32 //The threshold to turn on is 400.00*5/1024 = 1.95v
-//value gotten from http://www.mouser.com/catalog/specsheets/Seeed_101020023.pdf
-unsigned int lastUpdate = 0;
-unsigned int buzzerUpdate = 0;
+unsigned long lastGPSUpdate = 0;
+unsigned long lastSoundUpdate = 0;
+unsigned long lastAccelUpdate = 0;
+unsigned long lastPublish = 0;
+unsigned long buzzerUpdate = 0;
+long sum;
 bool isBuzzerOn = false;
-
+bool _gps_parse_failure;
+bool fix;
+double latitudeDegrees;
+double longitudeDegrees;
+double altitude;
+float data[4];      //[SOUND_READING, ACCEL_MAG, LAT, LON]
 
 void setup(){
+  // Hardware pin setup
   Serial.begin(9600);
-  //if (! mma.begin()) {
-  //  Serial.println("Couldnt start");
-  //  while (1);
-  //}
-  //Serial.println("MMA8451 found!");
-  //mma.setRange(MMA8451_RANGE_2_G);
   pinMode(SOUND, INPUT);
   pinMode(BUZZER, OUTPUT);
+
+  // Accelerometer setup
+  Serial.println("Adafruit MMA8451 test!");
+  if (!mma.begin()){
+    Serial.println("Couldn't start");
+    while (1);
+  }
+  Serial.println("MMA8451 found!");
+
+  mma.setRange(MMA8451_RANGE_2_G);
+
+  Serial.print("Range = "); Serial.print(2 << mma.getRange());
+  Serial.println("G");
+
+  // GPS setup
+  gps.begin(9600);
+  gps.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  delay(500);
+  gps.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);     // Default is 1 Hz update rate
+  delay(500);
+  gps.sendCommand(PGCMD_NOANTENNA);
+  delay(500);
+  gps_read_timer.start();     // Start the software timer
 }
 
 void loop(){
+  // GPS reading + Particle Publish
+  if (millis() - lastGPSUpdate >= GPS_INTERVAL_MS){
+    lastGPSUpdate = millis();
+    data[READING_LAT] = latitudeDegrees;
+    data[READING_LON] = longitudeDegrees;
+  }
 
-  if (millis() - lastUpdate >= INTERVAL_MS){
-    lastUpdate = millis();
-
-    //clearing previous buzzer
-    digitalWrite(BUZZER, LOW);
-
-    //formatting data to send
-    //the data is in the following formatting
-    //[SOUND_READING, ACCEL_X, ACCEL_Y, ACCEL_Z, LAT, LNG]
-    float data[6];
-
-    //sound sensor
-    long sum = 0;
-    for (int i = 0; i < 32; i++){
+  // Sound Sensor
+  if (millis() - lastSoundUpdate >= SOUND_INTERVAL_MS){
+    lastSoundUpdate = millis();
+    sum = 0;
+    for (int i=0; i<32; i++){
       int sound = analogRead(SOUND);
       sum += sound;
     }
     data[READING_SOUND] = (float)sum;
+  }
 
-    //accel readings
-    //mma.read();
-    //sensors_event_t event;
-    //mma.getEvent(&event);
-    //Serial.print(event.acceleration.x);
-    //data[1] = event.acceleration.x;
-    //data[2] = event.acceleration.y;
-    //data[3] = event.acceleration.z;
+  // Accelerometer
+  if (millis() - lastAccelUpdate >= ACCEL_INTERVAL_MS){
+    lastAccelUpdate = millis();
+    mma.read();
+    sensors_event_t event;
+    mma.getEvent(&event);
+    float accel = norm(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+    data[READING_ACCEL_MAG] = abs(accel-1);
+  }
 
-    data[READING_ACCEL_X] = 1.23124124;
-    data[READING_ACCEL_Y] = 0.421442142;
-    data[READING_ACCEL_Z] = 0.41242341;
-
-
-    //lat lng readings
-    data[READING_LAT] = 37.428059;
-    data[READING_LNG] = -122.174488;
-
-
+  if (millis() - lastPublish >= PUBLISH_INTERVAL_MS){
     Particle.publish("push_data", String::format(
-      "%f,%f,%f,%f,%f,%f", data[0],data[1],data[2],data[3],data[4],data[5]));
-
-    // Buzzer
-    Serial.println(sum);
-    if (detectedPerson(sum)) {
-      onBuzzer();
-    }
+      "%f,%0.3f,%0.6f,%0.6f", data[0],data[1],data[2],data[3]));
   }
 
-  if (isBuzzerOn && (millis() - buzzerUpdate >= INTERVAL_BUZZER)) {
+  // Buzzer On
+  if (detectedPerson(sum) || data[READING_ACCEL_MAG] >= 0.05)
+    onBuzzer();
+
+  // Buzzer Off
+  if (isBuzzerOn && (millis() - buzzerUpdate >= BUZZ_DURATION))
     offBuzzer();
-  }
 }
 
-bool detectedPerson(float sound) {
-  if (sound >= THRESHOLD_VALUE) {
+bool detectedPerson(float sound){
+  if (sound >= SOUND_THRESHOLD_VALUE)
     return true;
-  } else {
+  else
     return false;
-  }
 }
 
-void onBuzzer() {
+void onBuzzer(){
   Serial.println("buzz");
   digitalWrite(BUZZER, HIGH);
   isBuzzerOn = true;
   buzzerUpdate = millis();
 }
 
-void offBuzzer() {
+void offBuzzer(){
   Serial.println("offbuzz");
   buzzerUpdate = millis();
   digitalWrite(BUZZER, LOW);
   isBuzzerOn = false;
+}
+
+void updateGPS(){
+  char c = gps.read();
+  if (gps.newNMEAreceived()){
+    if (!gps.parse(gps.lastNMEA())){
+      _gps_parse_failure = true;
+      return;
+    }
+    else{
+      _gps_parse_failure = false;
+      fix = gps.fix;
+      latitudeDegrees = gps.latitudeDegrees;
+      longitudeDegrees = gps.longitudeDegrees;
+      altitude = gps.altitude;
+    }
+  }
+}
+
+float norm(float x, float y, float z){
+  return sqrt(x*x + y*y + z*z);
 }
