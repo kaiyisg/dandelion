@@ -14,7 +14,7 @@
 #define READING_LON           3
 #define ACCEL_INTERVAL_MS     2000
 #define SOUND_INTERVAL_MS     1000
-#define PUBLISH_INTERVAL_MS   1000
+#define PUBLISH_INTERVAL_MS   3000
 #define BUZZ_DURATION         2000
 #define GPS_INTERVAL_MS       5000
 #define SOUND_THRESHOLD_VALUE 55000
@@ -103,19 +103,23 @@ void loop(){
   }
 
   // Buzzer On
-  if (detectedPerson(sum) || data[READING_ACCEL_MAG] >= 0.05)
-    onBuzzer();
+  if (detectedPerson(sum, data[READING_ACCEL_MAG])
+    && !isBuzzerOn
+    && (millis() - buzzerUpdate >= BUZZ_DURATION)) {
+      onBuzzer();
+    }
 
   // Buzzer Off
   if (isBuzzerOn && (millis() - buzzerUpdate >= BUZZ_DURATION))
     offBuzzer();
 }
 
-bool detectedPerson(float sound){
-  if (sound >= SOUND_THRESHOLD_VALUE)
+bool detectedPerson(float sound, float accel){
+  if (sound >= SOUND_THRESHOLD_VALUE || accel >= 0.05) {
     return true;
-  else
+  } else {
     return false;
+  }
 }
 
 void onBuzzer(){
